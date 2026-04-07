@@ -10,6 +10,7 @@ Aplikasi chat realtime sederhana yang dibangun menggunakan **Go** di backend dan
 - 🕐 **Timestamp lengkap** — hover pada waktu pesan untuk melihat tanggal & jam lengkap
 - 🟢 **Status koneksi** — indikator realtime apakah terhubung atau terputus
 - 🔄 **Auto-reconnect** — otomatis menyambung kembali jika koneksi terputus
+- ✅ **Read-By** - Indikator pesan dibaca (✓✓)
 
 ## Tech Stack
 
@@ -84,5 +85,4 @@ Browser A                  Server Go (Hub)         Browser B
 - [ ] History pesan (SQLite/PostgreSQL)
 - [ ] Multiple room/channel
 - [ ] Autentikasi user (JWT)
-- [ ] Indikator pesan dibaca (✓✓)
 - [ ] Kirim gambar/file
