@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MariBercakap</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0a0a0f;
+      --surface:   #111118;
+      --surface2:  #1a1a24;
+      --border:    #2a2a3a;
+      --accent:    #00e5ff;
+      --accent2:   #7c3aed;
+      --green:     #00ff88;
+      --red:       #ff4466;
+      --text:      #e8e8f0;
+      --muted:     #5a5a72;
+      --me-bg:     #0d2d3a;
+      --me-border: #00e5ff40;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Space Grotesk', sans-serif;
+      height: 100dvh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    /* Background grid */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+    }
+
+    /* ── LOGIN SCREEN ── */
+    #login-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 32px;
+      animation: fadeUp 0.5s ease;
+    }
+
+    .logo {
+      text-align: center;
+    }
+
+    .logo h1 {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 3rem;
+      font-weight: 600;
+      letter-spacing: -2px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .logo p {
+      color: var(--muted);
+      font-size: 0.85rem;
+      font-family: 'IBM Plex Mono', monospace;
+      letter-spacing: 2px;
+      margin-top: 4px;
+    }
+
+    .login-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 36px;
+      width: 340px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .login-box label {
+      font-size: 0.75rem;
+      font-family: 'IBM Plex Mono', monospace;
+      color: var(--muted);
+      letter-spacing: 1px;
+    }
+
+    .login-box input {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 16px;
+      color: var(--text);
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.2s;
+      margin-top: 6px;
+    }
+
+    .login-box input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(0,229,255,0.08);
+    }
+
+    .btn-join {
+      background: linear-gradient(135deg, var(--accent), #0099bb);
+      color: #000;
+      border: none;
+      border-radius: 8px;
+      padding: 13px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.9rem;
+      font-weight: 600;
+      letter-spacing: 1px;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+
+    .btn-join:hover { opacity: 0.9; }
+    .btn-join:active { transform: scale(0.98); }
+
+    /* ── CHAT SCREEN ── */
+    #chat-screen {
+      display: none;
+      width: 100%;
+      max-width: 820px;
+      height: 100dvh;
+      max-height: 100dvh;
+      flex-direction: column;
+      animation: fadeUp 0.4s ease;
+    }
+
+    /* Header */
+    .chat-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      flex-shrink: 0;
+    }
+
+    .chat-header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .header-logo {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 1.2rem;
+      font-weight: 600;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 8px var(--green);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .user-badge {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .user-badge span {
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .online-count {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.72rem;
+      color: var(--green);
+      background: rgba(0,255,136,0.08);
+      border: 1px solid rgba(0,255,136,0.2);
+      border-radius: 20px;
+      padding: 3px 10px;
+    }
+
+    .btn-sound {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--accent);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s, border-color 0.2s;
+      flex-shrink: 0;
+    }
+
+    .btn-sound:hover { background: var(--border); }
+    .btn-sound.muted { color: var(--muted); }
+    .btn-sound svg { width: 15px; height: 15px; }
+
+    /* Messages */
+    #messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      scroll-behavior: smooth;
+    }
+
+    #messages::-webkit-scrollbar { width: 4px; }
+    #messages::-webkit-scrollbar-track { background: transparent; }
+    #messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    /* System message */
+    .msg-system {
+      text-align: center;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.72rem;
+      color: var(--muted);
+      padding: 8px 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .msg-system::before, .msg-system::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .msg-system.join { color: var(--green); }
+    .msg-system.leave { color: var(--red); }
+
+    /* Chat bubble wrapper */
+    .msg-row {
+      display: flex;
+      flex-direction: column;
+      max-width: 72%;
+      animation: bubbleIn 0.2s ease;
+    }
+
+    .msg-row.me {
+      align-self: flex-end;
+      align-items: flex-end;
+    }
+
+    .msg-row.other {
+      align-self: flex-start;
+      align-items: flex-start;
+    }
+
+    /* Group: jika pengirim sama berturutan, hapus margin atas */
+    .msg-row + .msg-row.me,
+    .msg-row + .msg-row.other { margin-top: 2px; }
+
+    .msg-meta {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 3px;
+      padding: 0 4px;
+    }
+
+    .msg-username {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--accent2);
+    }
+
+    .msg-row.me .msg-username { color: var(--accent); }
+
+    .msg-time {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.65rem;
+      color: var(--muted);
+      position: relative;
+      cursor: default;
+    }
+
+    /* Tooltip timestamp lengkap */
+    .msg-time::after {
+      content: attr(data-fulltime);
+      position: absolute;
+      bottom: calc(100% + 6px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-size: 0.68rem;
+      padding: 4px 10px;
+      border-radius: 6px;
+      white-space: nowrap;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.15s ease;
+      z-index: 10;
+    }
+
+    /* Panah kecil tooltip */
+    .msg-time::before {
+      content: '';
+      position: absolute;
+      bottom: calc(100% + 1px);
+      left: 50%;
+      transform: translateX(-50%);
+      border: 5px solid transparent;
+      border-top-color: var(--border);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.15s ease;
+      z-index: 10;
+    }
+
+    .msg-time:hover::after,
+    .msg-time:hover::before {
+      opacity: 1;
+    }
+
+    .bubble {
+      padding: 10px 14px;
+      border-radius: 12px;
+      font-size: 0.9rem;
+      line-height: 1.5;
+      word-break: break-word;
+    }
+
+    .msg-row.me .bubble {
+      background: var(--me-bg);
+      border: 1px solid var(--me-border);
+      border-bottom-right-radius: 4px;
+      color: var(--text);
+    }
+
+    .msg-row.other .bubble {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-bottom-left-radius: 4px;
+    }
+
+    /* Input area */
+    .chat-input-area {
+      padding: 16px 24px;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    #msg-input {
+      flex: 1;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 16px;
+      color: var(--text);
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 0.92rem;
+      outline: none;
+      transition: border-color 0.2s;
+      resize: none;
+    }
+
+    #msg-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(0,229,255,0.06);
+    }
+
+    #msg-input::placeholder { color: var(--muted); }
+
+    .btn-send {
+      width: 46px;
+      height: 46px;
+      border-radius: 10px;
+      border: none;
+      background: linear-gradient(135deg, var(--accent), #0099bb);
+      color: #000;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+
+    .btn-send:hover { opacity: 0.85; }
+    .btn-send:active { transform: scale(0.95); }
+
+    .btn-send svg { width: 18px; height: 18px; }
+
+    /* Connection status bar */
+    .conn-bar {
+      display: none;
+      padding: 6px 24px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.72rem;
+      text-align: center;
+      background: rgba(255,68,102,0.1);
+      color: var(--red);
+      border-bottom: 1px solid rgba(255,68,102,0.2);
+    }
+
+    .conn-bar.visible { display: block; }
+
+    /* Typing indicator */
+    #typing-indicator {
+      min-height: 24px;
+      padding: 0 24px 6px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.72rem;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: opacity 0.2s;
+    }
+
+    .typing-dots {
+      display: flex;
+      gap: 3px;
+      align-items: center;
+    }
+
+    .typing-dots span {
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: typingBounce 1.2s infinite ease-in-out;
+    }
+
+    .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes typingBounce {
+      0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+      30% { transform: translateY(-4px); opacity: 1; }
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes bubbleIn {
+      from { opacity: 0; transform: scale(0.96); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── LOGIN ── -->
+<div id="login-screen">
+  <div class="logo">
+    <h1>MariBercakap</h1>
+    <p>// REALTIME · WEBSOCKET · GO</p>
+  </div>
+  <div class="login-box">
+    <div>
+      <label>USERNAME</label>
+      <input type="text" id="username-input" placeholder="masukkan username..." maxlength="20" autocomplete="off" />
+    </div>
+    <button class="btn-join" onclick="joinChat()">JOIN ROOM →</button>
+  </div>
+</div>
+
+<!-- ── CHAT ── -->
+<div id="chat-screen">
+  <div class="chat-header">
+    <div class="chat-header-left">
+      <div class="header-logo">MariBercakap</div>
+      <div class="status-dot" id="status-dot"></div>
+    </div>
+    <div class="user-badge">
+      logged in as <span id="display-username"></span>
+    </div>
+    <div class="online-count" id="online-count">● 0 online</div>
+    <button class="btn-sound" id="btn-sound" onclick="toggleSound()" title="Toggle notifikasi suara">
+      <svg id="icon-sound-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+        <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+        <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+      </svg>
+      <svg id="icon-sound-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none">
+        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+        <line x1="23" y1="9" x2="17" y2="15"/>
+        <line x1="17" y1="9" x2="23" y2="15"/>
+      </svg>
+    </button>
+  </div>
+
+  <div class="conn-bar" id="conn-bar">⚠ koneksi terputus — mencoba reconnect...</div>
+
+  <div id="messages"></div>
+
+  <div id="typing-indicator"></div>
+
+  <div class="chat-input-area">
+    <input type="text" id="msg-input" placeholder="Ketik pesan..." maxlength="500" autocomplete="off" />
+    <button class="btn-send" onclick="sendMessage()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="22" y1="2" x2="11" y2="13"/>
+        <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+      </svg>
+    </button>
+  </div>
+</div>
+
+<script>
+  let ws = null;
+  let myUsername = '';
+  let reconnectTimer = null;
+
+  // Sound state
+  let soundEnabled = true;
+  let audioCtx = null;
+
+  function getAudioCtx() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    return audioCtx;
+  }
+
+  // Bunyi untuk pesan masuk — "pop" singkat
+  function playMessageSound() {
+    if (!soundEnabled) return;
+    try {
+      const ctx = getAudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(660, ctx.currentTime + 0.1);
+
+      gain.gain.setValueAtTime(0.15, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.15);
+    } catch (e) {}
+  }
+
+  // Bunyi untuk user join — nada naik
+  function playJoinSound() {
+    if (!soundEnabled) return;
+    try {
+      const ctx = getAudioCtx();
+      [523, 659].forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.1);
+        gain.gain.setValueAtTime(0.08, ctx.currentTime + i * 0.1);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.1 + 0.12);
+        osc.start(ctx.currentTime + i * 0.1);
+        osc.stop(ctx.currentTime + i * 0.1 + 0.12);
+      });
+    } catch (e) {}
+  }
+
+  // Bunyi untuk user leave — nada turun
+  function playLeaveSound() {
+    if (!soundEnabled) return;
+    try {
+      const ctx = getAudioCtx();
+      [659, 523].forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.1);
+        gain.gain.setValueAtTime(0.08, ctx.currentTime + i * 0.1);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.1 + 0.12);
+        osc.start(ctx.currentTime + i * 0.1);
+        osc.stop(ctx.currentTime + i * 0.1 + 0.12);
+      });
+    } catch (e) {}
+  }
+
+  function toggleSound() {
+    soundEnabled = !soundEnabled;
+    const btn = document.getElementById('btn-sound');
+    document.getElementById('icon-sound-on').style.display = soundEnabled ? '' : 'none';
+    document.getElementById('icon-sound-off').style.display = soundEnabled ? 'none' : '';
+    btn.classList.toggle('muted', !soundEnabled);
+    btn.title = soundEnabled ? 'Matikan notifikasi suara' : 'Aktifkan notifikasi suara';
+  }
+
+  // Typing state
+  let isTyping = false;
+  let typingTimer = null;
+  const typingUsers = new Set(); // set username yang sedang mengetik
+
+  // ── JOIN ──
+  function joinChat() {
+    const input = document.getElementById('username-input');
+    const name = input.value.trim();
+    if (!name) { input.focus(); return; }
+
+    myUsername = name;
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('chat-screen').style.display = 'flex';
+    document.getElementById('display-username').textContent = name;
+
+    connect();
+    document.getElementById('msg-input').focus();
+  }
+
+  document.getElementById('username-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') joinChat();
+  });
+
+  // ── WEBSOCKET ──
+  function connect() {
+    const host = window.location.host;
+    ws = new WebSocket(`ws://${host}/ws?username=${encodeURIComponent(myUsername)}`);
+
+    ws.onopen = () => {
+      document.getElementById('conn-bar').classList.remove('visible');
+      document.getElementById('status-dot').style.background = 'var(--green)';
+      if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+    };
+
+    ws.onmessage = (e) => {
+      const msg = JSON.parse(e.data);
+      renderMessage(msg);
+    };
+
+    ws.onclose = () => {
+      document.getElementById('conn-bar').classList.add('visible');
+      document.getElementById('status-dot').style.background = 'var(--red)';
+      typingUsers.clear();
+      updateTypingIndicator();
+      reconnectTimer = setTimeout(connect, 3000);
+    };
+
+    ws.onerror = () => ws.close();
+  }
+
+  // ── SEND ──
+  function sendMessage() {
+    const input = document.getElementById('msg-input');
+    const text = input.value.trim();
+    if (!text || !ws || ws.readyState !== WebSocket.OPEN) return;
+
+    ws.send(JSON.stringify({ type: 'message', text }));
+    input.value = '';
+    input.focus();
+
+    // Stop typing setelah pesan terkirim
+    sendTyping('stop');
+  }
+
+  // ── TYPING ──
+  function sendTyping(state) {
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    ws.send(JSON.stringify({ type: 'typing', text: state }));
+  }
+
+  function onInputChange() {
+    if (!isTyping) {
+      isTyping = true;
+      sendTyping('start');
+    }
+
+    // Reset timer: jika berhenti mengetik 2 detik → kirim "stop"
+    clearTimeout(typingTimer);
+    typingTimer = setTimeout(() => {
+      isTyping = false;
+      sendTyping('stop');
+    }, 2000);
+  }
+
+  function updateTypingIndicator() {
+    const el = document.getElementById('typing-indicator');
+    if (typingUsers.size === 0) {
+      el.innerHTML = '';
+      return;
+    }
+
+    const names = [...typingUsers].join(', ');
+    const label = typingUsers.size === 1
+      ? `${names} sedang mengetik`
+      : `${names} sedang mengetik`;
+
+    el.innerHTML = `
+      <div class="typing-dots">
+        <span></span><span></span><span></span>
+      </div>
+      ${escHtml(label)}...
+    `;
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const msgInput = document.getElementById('msg-input');
+
+    msgInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    // Deteksi user mengetik
+    msgInput.addEventListener('input', onInputChange);
+  });
+
+  // ── RENDER ──
+  function renderMessage(msg) {
+    const container = document.getElementById('messages');
+
+    // Update online count
+    if (msg.userCount !== undefined && msg.userCount > 0) {
+      document.getElementById('online-count').textContent = `● ${msg.userCount} online`;
+    }
+
+    if (msg.type === 'typing') {
+      // Update set user yang sedang mengetik
+      if (msg.text === 'start') {
+        typingUsers.add(msg.username);
+      } else {
+        typingUsers.delete(msg.username);
+      }
+      updateTypingIndicator();
+      return;
+    }
+
+    if (msg.type === 'join' || msg.type === 'leave') {
+      // Hapus dari typing jika user keluar
+      if (msg.type === 'leave') {
+        typingUsers.delete(msg.username);
+        updateTypingIndicator();
+        playLeaveSound();
+      } else {
+        playJoinSound();
+      }
+      const el = document.createElement('div');
+      el.className = `msg-system ${msg.type}`;
+      el.textContent = msg.text;
+      container.appendChild(el);
+    } else if (msg.type === 'message') {
+      // Hapus dari typing saat pesan masuk dari user tersebut
+      typingUsers.delete(msg.username);
+      updateTypingIndicator();
+
+      // Bunyi hanya untuk pesan dari orang lain
+      if (msg.username !== myUsername) playMessageSound();
+
+      const isMe = msg.username === myUsername;
+      const row = document.createElement('div');
+      row.className = `msg-row ${isMe ? 'me' : 'other'}`;
+
+      row.innerHTML = `
+        <div class="msg-meta">
+          <span class="msg-username">${escHtml(msg.username)}</span>
+          <span class="msg-time" data-fulltime="${escHtml(msg.fullTimestamp || '')}">${msg.timestamp}</span>
+        </div>
+        <div class="bubble">${escHtml(msg.text)}</div>
+      `;
+      container.appendChild(row);
+    }
+
+    container.scrollTop = container.scrollHeight;
+  }
+
+  function escHtml(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+</script>
+</body>
+</html>
