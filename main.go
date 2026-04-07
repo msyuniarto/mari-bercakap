@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"sync"
@@ -24,18 +25,21 @@ type Client struct {
 
 // Message adalah struktur pesan yang dikirim antar client
 type Message struct {
-	Type          string `json:"type"` // "message", "join", "leave", "typing"
-	Username      string `json:"username"`
-	Text          string `json:"text"`
-	Timestamp     string `json:"timestamp"`     // singkat: "15:04"
-	FullTimestamp string `json:"fullTimestamp"` // lengkap: "Senin, 07 Apr 2026 · 15:04:32"
-	UserCount     int    `json:"userCount"`
+	Type          string   `json:"type"` // "message", "join", "leave", "typing", "read"
+	ID            string   `json:"id"`   // ID unik per pesan
+	Username      string   `json:"username"`
+	Text          string   `json:"text"`
+	Timestamp     string   `json:"timestamp"`     // singkat: "15:04"
+	FullTimestamp string   `json:"fullTimestamp"` // lengkap: "Senin, 07 Apr 2026 · 15:04:32"
+	UserCount     int      `json:"userCount"`
+	ReadBy        []string `json:"readBy"` // daftar username yang sudah baca
 }
 
 // IncomingMessage adalah pesan yang diterima dari client
 type IncomingMessage struct {
-	Type string `json:"type"` // "message" atau "typing"
-	Text string `json:"text"`
+	Type  string `json:"type"` // "message", "typing", "read"
+	Text  string `json:"text"`
+	MsgID string `json:"msgId"` // diisi saat type == "read"
 }
 
 // TypingEvent membawa pesan typing beserta pointer pengirimnya
@@ -44,11 +48,19 @@ type TypingEvent struct {
 	sender *Client
 }
 
+// ReadEvent membawa info pesan mana yang dibaca oleh siapa
+type ReadEvent struct {
+	msgID  string
+	reader string
+}
+
 // Hub mengelola semua client yang terhubung
 type Hub struct {
 	clients    map[*Client]bool
+	messages   map[string]*Message // menyimpan semua pesan berdasarkan ID
 	broadcast  chan Message
 	typing     chan TypingEvent
+	readEvent  chan ReadEvent
 	register   chan *Client
 	unregister chan *Client
 	mu         sync.RWMutex
@@ -61,8 +73,10 @@ type Hub struct {
 func newHub() *Hub {
 	return &Hub{
 		clients:    make(map[*Client]bool),
+		messages:   make(map[string]*Message),
 		broadcast:  make(chan Message, 256),
 		typing:     make(chan TypingEvent, 64),
+		readEvent:  make(chan ReadEvent, 128),
 		register:   make(chan *Client),
 		unregister: make(chan *Client),
 	}
@@ -107,6 +121,14 @@ func (h *Hub) run() {
 			}
 
 		case msg := <-h.broadcast:
+			// Simpan pesan ke map jika punya ID (pesan chat biasa)
+			if msg.ID != "" {
+				h.mu.Lock()
+				msgCopy := msg
+				h.messages[msg.ID] = &msgCopy
+				h.mu.Unlock()
+			}
+
 			h.mu.RLock()
 			for client := range h.clients {
 				select {
@@ -128,6 +150,48 @@ func (h *Hub) run() {
 				}
 				select {
 				case client.send <- event.msg:
+				default:
+				}
+			}
+			h.mu.RUnlock()
+
+		case re := <-h.readEvent:
+			// Update readBy di message store
+			h.mu.Lock()
+			msg, ok := h.messages[re.msgID]
+			if ok {
+				// Cegah duplikat
+				alreadyRead := false
+				for _, u := range msg.ReadBy {
+					if u == re.reader {
+						alreadyRead = true
+						break
+					}
+				}
+				if !alreadyRead {
+					msg.ReadBy = append(msg.ReadBy, re.reader)
+				}
+			}
+			var readBy []string
+			if ok {
+				readBy = msg.ReadBy
+			}
+			h.mu.Unlock()
+
+			if !ok {
+				continue
+			}
+
+			// Broadcast update "read" ke semua client
+			h.mu.RLock()
+			updateMsg := Message{
+				Type:   "read",
+				ID:     re.msgID,
+				ReadBy: readBy,
+			}
+			for client := range h.clients {
+				select {
+				case client.send <- updateMsg:
 				default:
 				}
 			}
@@ -178,8 +242,8 @@ func (c *Client) readPump() {
 			continue
 		}
 
-		if incoming.Type == "typing" {
-			// Forward event typing ke semua client lain
+		switch incoming.Type {
+		case "typing":
 			c.hub.typing <- TypingEvent{
 				msg: Message{
 					Type:     "typing",
@@ -188,14 +252,25 @@ func (c *Client) readPump() {
 				},
 				sender: c,
 			}
-		} else {
-			// Kirim ke hub untuk di-broadcast
+
+		case "read":
+			if incoming.MsgID != "" {
+				c.hub.readEvent <- ReadEvent{
+					msgID:  incoming.MsgID,
+					reader: c.username,
+				}
+			}
+
+		default:
+			// Kirim ke hub untuk di-broadcast sebagai pesan chat
 			c.hub.broadcast <- Message{
 				Type:          "message",
+				ID:            generateID(),
 				Username:      c.username,
 				Text:          incoming.Text,
 				Timestamp:     now(),
 				FullTimestamp: fullNow(),
+				ReadBy:        []string{},
 			}
 		}
 	}
@@ -301,4 +376,9 @@ func fullNow() string {
 	return days[t.Weekday()] + ", " +
 		t.Format("02") + " " + months[t.Month()] + " " + t.Format("2006") +
 		" · " + t.Format("15:04:05")
+}
+
+// generateID membuat ID unik sederhana berdasarkan waktu
+func generateID() string {
+	return fmt.Sprintf("%d", time.Now().UnixNano())
 }

@@ -373,6 +373,53 @@
       border-bottom-left-radius: 4px;
     }
 
+    /* Read receipt */
+    .msg-receipt {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: 3px;
+      padding: 0 4px;
+      min-height: 14px;
+      justify-content: flex-end;
+    }
+
+    .receipt-checks {
+      font-size: 0.72rem;
+      color: var(--muted);
+      position: relative;
+      cursor: default;
+      transition: color 0.2s;
+    }
+
+    .receipt-checks.read {
+      color: var(--accent);
+    }
+
+    /* Tooltip nama pembaca */
+    .receipt-checks::after {
+      content: attr(data-readers);
+      position: absolute;
+      bottom: calc(100% + 6px);
+      right: 0;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.68rem;
+      padding: 4px 10px;
+      border-radius: 6px;
+      white-space: nowrap;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.15s ease;
+      z-index: 10;
+    }
+
+    .receipt-checks[data-readers]:hover::after {
+      opacity: 1;
+    }
+
     /* Input area */
     .chat-input-area {
       padding: 16px 24px;
@@ -549,6 +596,31 @@
   let myUsername = '';
   let reconnectTimer = null;
 
+  // Read receipt — observer untuk deteksi pesan masuk ke viewport
+  let readObserver = null;
+
+  function setupReadObserver() {
+    readObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (!entry.isIntersecting) return;
+        const row = entry.target;
+        const msgId = row.dataset.msgId;
+        const sender = row.dataset.sender;
+
+        // Jangan kirim read untuk pesan sendiri
+        if (!msgId || sender === myUsername) return;
+
+        // Kirim event "read" ke server
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: 'read', msgId }));
+        }
+
+        // Hentikan observasi setelah terbaca
+        readObserver.unobserve(row);
+      });
+    }, { threshold: 0.8 }); // 80% pesan harus terlihat
+  }
+
   // Sound state
   let soundEnabled = true;
   let audioCtx = null;
@@ -646,6 +718,7 @@
     document.getElementById('display-username').textContent = name;
 
     connect();
+    setupReadObserver();
     document.getElementById('msg-input').focus();
   }
 
@@ -768,6 +841,12 @@
       return;
     }
 
+    if (msg.type === 'read') {
+      // Update tampilan centang pada pesan yang dibaca
+      updateReceipt(msg.id, msg.readBy || []);
+      return;
+    }
+
     if (msg.type === 'join' || msg.type === 'leave') {
       // Hapus dari typing jika user keluar
       if (msg.type === 'leave') {
@@ -792,6 +871,8 @@
       const isMe = msg.username === myUsername;
       const row = document.createElement('div');
       row.className = `msg-row ${isMe ? 'me' : 'other'}`;
+      row.dataset.msgId = msg.id;
+      row.dataset.sender = msg.username;
 
       row.innerHTML = `
         <div class="msg-meta">
@@ -799,11 +880,31 @@
           <span class="msg-time" data-fulltime="${escHtml(msg.fullTimestamp || '')}">${msg.timestamp}</span>
         </div>
         <div class="bubble">${escHtml(msg.text)}</div>
+        ${isMe ? `<div class="msg-receipt"><span class="receipt-checks" data-msg-id="${msg.id}">✓</span></div>` : ''}
       `;
       container.appendChild(row);
+
+      // Daftarkan ke observer untuk deteksi dibaca (hanya pesan dari orang lain)
+      if (!isMe && readObserver) {
+        readObserver.observe(row);
+      }
     }
 
     container.scrollTop = container.scrollHeight;
+  }
+
+  // Update tampilan centang berdasarkan daftar pembaca
+  function updateReceipt(msgId, readBy) {
+    const checks = document.querySelector(`.receipt-checks[data-msg-id="${msgId}"]`);
+    if (!checks) return;
+
+    // Filter: jangan tampilkan diri sendiri sebagai pembaca
+    const readers = readBy.filter(u => u !== myUsername);
+    if (readers.length === 0) return;
+
+    checks.textContent = '✓✓';
+    checks.classList.add('read');
+    checks.setAttribute('data-readers', 'Dibaca: ' + readers.join(', '));
   }
 
   function escHtml(str) {
